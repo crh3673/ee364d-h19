@@ -1,0 +1,103 @@
+import numpy as np
+from sklearn.cluster import MeanShift
+from sklearn.datasets import make_blobs
+import csv
+import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
+np.random.seed(1)
+import pandas as pd
+
+
+# update_annot is used to update the annotation as you hover over each cluster
+# will display the x, y, and z coordinates
+def update_annot(ind):
+    pos = sc.get_offsets()[ind["ind"][0]]
+    annot.xy = pos
+    text = "{}, {}, {}".format((" ".join([names[n, 0] for n in ind["ind"]])),
+                               (" ".join([names[n, 1] for n in ind["ind"]])),
+                               (" ".join([names[n, 2] for n in ind["ind"]])))
+    annot.set_text(text)
+    annot.get_bbox_patch().set_alpha(0.4)
+
+
+# hover is the function that determines if the hover event occurs on the data or not
+# if it occurs on the data it will go to the update_annot function and display the values
+# if it is not over data it will not display anything
+def hover(event):
+    vis = annot.get_visible()
+    if event.inaxes == ax:
+        cont, ind = sc.contains(event)
+        if cont:
+            update_annot(ind)
+            annot.set_visible(True)
+            fig.canvas.draw_idle()
+        else:
+            if vis:
+                annot.set_visible(False)
+                fig.canvas.draw_idle()
+
+file_name = input("Please enter file name:")
+
+clusterCenters = []
+with open(file_name, newline='') as csvfile:
+    m = 0
+    spamreader = csv.reader(csvfile, delimiter=',', quotechar='|')
+    next(spamreader)
+    for row in spamreader:
+        remove_commas = []
+        for i in range(0, len(row)):
+            if row[i]:
+                remove_commas.append(row[i].split())
+                length = len(row[i].split())
+                if length == 3:
+                    remove_commas[i][0] = remove_commas[i][0].replace('[', '')
+                    remove_commas[i][2] = remove_commas[i][2].replace(']', '')
+
+                if len(remove_commas[i]) == 4 and remove_commas[i][3] == ']':
+                    remove_commas[i][0] = remove_commas[i][0].replace('[', '')
+                    remove_commas[i].pop()
+
+                if len(remove_commas[i]) == 4 and remove_commas[i][0] == '[':
+                    remove_commas[i].pop(0)
+                    remove_commas[i][2] = remove_commas[i][2].replace(']', '')
+
+                if len(remove_commas[i]) == 5:
+                    remove_commas[i].pop(0)
+                    remove_commas[i].pop(3)
+
+                for l in range(0, 3):
+                    remove_commas[i][l] = float(remove_commas[i][l])
+            else:
+                break
+
+        remove_commas = np.asarray(remove_commas)
+        clusterCenters.append(remove_commas)
+        m= m+1
+
+val = input("Please enter blob number:")
+value = int(val)
+
+if value > len(clusterCenters):
+    print("Uh oh! This value is out of range")
+else:
+    name1 = clusterCenters[value]
+    name = np.round_(name1, 2)
+    print(name)
+    names = name.astype(str)
+    c = np.random.randint(1, 6, size=15)
+
+    colors = 10 * ['r', 'g', 'b', 'c', 'k', 'y', 'm']
+    fig = plt.figure()
+    ax = fig.add_subplot(111, projection='3d')
+
+    sc = ax.scatter(clusterCenters[value][:, 0], clusterCenters[value][:, 1], clusterCenters[value][:, 2],
+                    marker="o", color='k', s=150, linewidths=5, zorder=10)
+
+    annot = ax.annotate("", xy=(0, 0), xytext=(20, 20), textcoords="offset points",
+                        bbox=dict(boxstyle="round", fc="w"),
+                        arrowprops=dict(arrowstyle="->"))
+    annot.set_visible(False)
+
+    fig.canvas.mpl_connect("motion_notify_event", hover)
+    plt.show()
+
